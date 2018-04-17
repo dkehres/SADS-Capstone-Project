@@ -1,13 +1,34 @@
 package gui;
 
+import java.awt.Color;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+
+import javax.swing.JTextPane;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 import gui.commands.*;
 
 public final class Console
 {
+	/* Constants */
+	
 	private static final String COMMAND_FLAG = "/";
+	
+	// Identify unique styles used in the Console output
+	private static final int OUT = 0; //output
+	private static final int ERR = 1; //error
+	private static final int WRN = 2; //warning
+	private static final int HDR = 3; //header
+	private static final int DBG = 4; //debug
 	
 	/* Static Vars */
 	
@@ -21,9 +42,41 @@ public final class Console
 		//build the command list
 		commandList = new HashMap<String, Command>();
 		
-		commandList.put("clear", new ClearCommand());
-		commandList.put("debug", new DebugCommand());
-		commandList.put("exit", new ExitCommand());
+		commandList.put("clear", new ClearCommand("clear"));
+		commandList.put("debug", new DebugCommand("debug"));
+		commandList.put("exec", new ExecCommand("exec"));
+		commandList.put("exit", new ExitCommand("exit"));
+		commandList.put("help", new HelpCommand("help"));
+	}
+	
+	// All available styles in the CLI
+	private static SimpleAttributeSet[] styles;
+	static
+	{
+		//output
+		styles = new SimpleAttributeSet[5];
+		styles[OUT] = new SimpleAttributeSet();
+		StyleConstants.setForeground(styles[OUT], Color.white);
+		
+		//error
+		styles[ERR] = new SimpleAttributeSet();
+		StyleConstants.setForeground(styles[ERR], Color.red);
+		StyleConstants.setBold(styles[ERR], true);
+		
+		//warning
+		styles[WRN] = new SimpleAttributeSet();
+		StyleConstants.setForeground(styles[WRN], Color.yellow);
+		StyleConstants.setBold(styles[WRN], true);
+		
+		//header
+		styles[HDR] = new SimpleAttributeSet();
+		StyleConstants.setForeground(styles[HDR], Color.white);
+		StyleConstants.setBold(styles[HDR], true);
+		
+		//debug
+		styles[DBG] = new SimpleAttributeSet();
+		StyleConstants.setForeground(styles[DBG], Color.gray);
+		StyleConstants.setBold(styles[DBG], true);
 	}
 	
 	/* Instance Vars */
@@ -33,7 +86,9 @@ public final class Console
 	private int historyIndex;
 	
 	// The GUI the Console operates upon
-	private MainWindow front;
+	private JTextPane front;
+	
+	private PrintStream debugStream;
 	
 	/* Static Methods */
 	
@@ -49,21 +104,55 @@ public final class Console
 	}
 	
 	/**
-	 * Print to the current Console instance's output
+	 * Get a list of all the commands that can be run by the Console
+	 * @return a list of Command objects being managed by this Console
+	 */
+	public static Command[] getCommands()
+	{
+		Collection<Command> set = commandList.values();
+		Command[] commands = new Command[set.size()];
+		commands = set.toArray(commands);
+		return commands;
+	}
+	
+	/**
+	 * Print to the current Console instance UI output
 	 * @param s - the text to print
 	 */
 	public static void print(String s)
 	{
-		instance().front.printToOut(s);
+		print(s, OUT);
+	}
+	public static void print(String s, int type)
+	{
+		try
+		{
+			sendToFront(s, styles[type]);
+		}
+		catch(IndexOutOfBoundsException ioobe)
+		{
+			System.err.println("Invalid text style " + ioobe.getMessage() + ".");
+		}
+		catch(NullPointerException npe)
+		{
+			if(type == getErr())
+				System.err.print(s);
+			else
+				System.out.print(s);
+		}
 	}
 	
 	/**
-	 * Print to the current Console instance's output, appending a newline
+	 * Print to the current Console instance UI, appending a newline
 	 * @param s - the text to print
 	 */
 	public static void println(String s)
 	{
-		instance().front.printlnToOut(s);
+		println(s, OUT);
+	}
+	public static void println(String s, int type)
+	{
+		print(s + "\n", type);
 	}
 	
 	/**
@@ -71,9 +160,63 @@ public final class Console
 	 */
 	public static void clear()
 	{
-		instance().front.clearOut();
+		Document d = instance().front.getDocument();
+		try { d.remove(0, d.getLength()); }
+		catch (BadLocationException e)
+		{
+			System.err.println("Encountered an error clearing the console. " + e.getMessage());
+		}
 	}
 	
+	/**
+	 * @return - the default output type
+	 */
+	public static int getOut()
+	{
+		return OUT;
+	}
+	
+	/**
+	 * @return - the error output type
+	 */
+	public static int getErr()
+	{
+		return ERR;
+	}
+	
+	/**
+	 * @return - the output type for warnings
+	 */
+	public static int getWrn()
+	{
+		return WRN;
+	}
+	
+	/**
+	 * @return - the output type for headers
+	 */
+	public static int getHdr()
+	{
+		return HDR;
+	}
+	
+	/**
+	 * @return - the output type for redirected debug output
+	 */
+	public static int getDbg()
+	{
+		return DBG;
+	}
+	
+	private static void sendToFront(String text, SimpleAttributeSet set)
+	{
+		try
+		{
+			StyledDocument frontDoc = instance().front.getStyledDocument();
+			frontDoc.insertString(frontDoc.getLength(), text, set);
+		}
+		catch(BadLocationException ble) { }
+	}
 	
 	/* Instance Methods */
 	private Console()
@@ -85,6 +228,16 @@ public final class Console
 		history.add("");
 		
 		front = null;
+		
+		debugStream = null;
+	}
+	
+	/**
+	 * A PrintStream used to redirect System.out and System.err to the console.
+	 */
+	public PrintStream getDebugStream()
+	{
+		return debugStream;
 	}
 	
 	/**
@@ -109,9 +262,12 @@ public final class Console
 			}
 			catch(Exception e)
 			{
-				//TODO print error message out to console
+				println("Command \"" + args[0] + "\" encountered a problem.\n" + e.toString(), ERR);
+				e.printStackTrace();
 			}
 		}
+		else
+			println("Command \"" + args[0] + "\" could not be found.", ERR);
 		
 		return success;
 	}
@@ -146,8 +302,41 @@ public final class Console
 	 * Tie the singleton instance to a GUI instance
 	 * @param front - a reference to the GUI instance
 	 */
-	public void setFront(MainWindow front)
+	public void setFront(JTextPane front)
 	{
+		front.removeStyle("out");
+		front.removeStyle("err");
+		front.removeStyle("wrn");
+		front.removeStyle("hdr");
+		front.removeStyle("dbg");
 		this.front = front;
+		front.addStyle("out", null).addAttribute("outStyle", styles[OUT]);
+		front.addStyle("err", null).addAttribute("errStyle", styles[ERR]);
+		front.addStyle("wrn", null).addAttribute("wrnStyle", styles[WRN]);
+		front.addStyle("hdr", null).addAttribute("hdrStyle", styles[HDR]);
+		front.addStyle("dbg", null).addAttribute("dbgStyle", styles[DBG]);
+		
+		if(front != null)
+		{
+			debugStream = new PrintStream(new DebugOutputStream(front, getDbg()));
+		}
+	}
+	
+	private static class DebugOutputStream extends OutputStream
+	{
+		private int textType;
+		private JTextPane area;
+		
+		public DebugOutputStream(JTextPane area, int textType)
+		{
+			this.area = area;
+			this.textType = textType;
+		}
+		
+		@Override
+		public void write(int b) throws IOException
+		{
+			Console.print(String.valueOf((char)b), textType);
+		}
 	}
 }

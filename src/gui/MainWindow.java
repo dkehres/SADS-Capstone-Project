@@ -1,10 +1,11 @@
 package gui;
+import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JMenu;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -16,12 +17,10 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 
 import javax.swing.JScrollPane;
@@ -34,8 +33,8 @@ import javax.swing.SwingConstants;
 import javax.swing.event.CaretListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.DefaultCaret;
 import javax.swing.text.JTextComponent;
-import javax.swing.event.AncestorListener;
 import javax.swing.event.CaretEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -54,19 +53,17 @@ import grammar.AntlrBridge;
 
 public class MainWindow
 {
-	public static boolean DEBUG;
-
-	//The file most recently opened/saved batch
-	private File currentBatch;
+	public static final String UNSAVED_INDICATOR = "*";
 	
-	//A flag that indicates changes have been made to currentBatch
-	private boolean unsavedChanges;
+	public static boolean DEBUG;
+	
+	private int currentEditor;
+	private ArrayList<Editor> editors;
 	
 	//The file to which output dumps will be saved
 	private File currentOutputDump;
 	
-	//A listener that raises the unsavedChanges flag
-	private DocumentListener changesListener;
+	private DocumentListener changesIndicatorListener;
 	
 	private JFrame frmStringSequenceAnalyzer;
 	private JTextField inputLine;
@@ -79,6 +76,7 @@ public class MainWindow
 	private JLabel lblFilename;
 	private JTextPane outputArea;
 	private JTextPane editorArea;
+	private JScrollPane scrollPane;
 
 	/**
 	 * Launch the application.
@@ -106,34 +104,14 @@ public class MainWindow
 	public MainWindow() {
 		initialize();
 		
-		setCurrentBatch(null);
-		unsavedChanges = false;
+		editors = new ArrayList<Editor>();
+		editors.add(new Editor(editorArea));
+		currentEditor = 0;
 		
 		currentOutputDump = null;
 		
-		changesListener = new DocumentListener() {
-			/**
-			 * Track changes made to the currently open document
-			 */
-			@Override
-			public void changedUpdate(DocumentEvent arg0) {
-				unsavedChanges = true;
-				System.out.println("There are now unsaved changes."); //DEBUG
-			}
-			@Override
-			public void insertUpdate(DocumentEvent arg0) {
-				unsavedChanges = true;
-				System.out.println("There are now unsaved insertions."); //DEBUG
-			}
-			@Override
-			public void removeUpdate(DocumentEvent arg0) {
-				unsavedChanges = true;
-				System.out.println("There are now unsaved deletions."); //DEBUG
-			}
-		};
-		
 		//Create a Console singleton if one has not already been instantiated
-		Console.instance().setFront(this);
+		Console.instance().setFront(outputArea);
 	}
 
 	/**
@@ -141,7 +119,7 @@ public class MainWindow
 	 */
 	private void initialize() {
 		frmStringSequenceAnalyzer = new JFrame();
-		frmStringSequenceAnalyzer.setTitle("String Sequence Analyzer - v0.0.1");
+		frmStringSequenceAnalyzer.setTitle("String Sequence Analyzer - v0.1.0");
 		frmStringSequenceAnalyzer.setBounds(100, 100, 800, 600);
 		frmStringSequenceAnalyzer.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		
@@ -165,22 +143,9 @@ public class MainWindow
 				//select the editor tab
 				tabbedPane.setSelectedIndex(1);
 				
-				//if there are unresolved changes, abort creating a new file
-				if(!resolveUnsavedChanges())
-					return;
-				
-				//prompt the user to provide a file name
-				JFileChooser chooser = new JFileChooser();
-				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-				chooser.setDialogType(JFileChooser.CUSTOM_DIALOG);
-				int retVal = chooser.showDialog(frmStringSequenceAnalyzer, "Create");
-				File f = null;
-				if(retVal == JFileChooser.APPROVE_OPTION)
-					f = chooser.getSelectedFile();
-				else
-					return;
-				
-				setCurrentBatch(f);
+				//TODO open new editor
+				editors.set(0, new Editor(editorArea));
+				editorArea.getDocument().addDocumentListener(changesIndicatorListener);
 			}
 		});
 		mnFile.add(mntmNewBatch);
@@ -192,37 +157,9 @@ public class MainWindow
 			{
 				tabbedPane.setSelectedIndex(1);
 				
-				//if there are unresolved changes, abort opening a new file
-				if(!resolveUnsavedChanges())
-					return;
-				
-				//dump the contents of the editor
-				editorArea.setText("");
-				
-				//user selects file
-				JFileChooser chooser = new JFileChooser();
-				chooser.setDialogType(JFileChooser.OPEN_DIALOG);
-				int retVal = chooser.showOpenDialog(frmStringSequenceAnalyzer);
-				File f = null;
-				if(retVal == JFileChooser.APPROVE_OPTION)
-					f = chooser.getSelectedFile();
-				else
-					return;
-				
-				//save reference to file for future saves
-				setCurrentBatch(f);
-				
-				//dump file contents into the editorArea
-				try
-				{
-					BufferedReader reader = new BufferedReader(new FileReader(f));
-					editorArea.read(reader, reader);
-					editorArea.getDocument().addDocumentListener(changesListener);
-					reader.close();
-				}
-				catch (IOException e){ e.printStackTrace(); }
-				
-				unsavedChanges = false;
+				editors.get(0).open();
+				lblFilename.setText(editors.get(0).getFileName());
+				editorArea.getDocument().addDocumentListener(changesIndicatorListener);
 			}
 		});
 		mnFile.add(mntmOpenBatch);
@@ -238,9 +175,8 @@ public class MainWindow
 			 */
 			public void actionPerformed(ActionEvent e)
 			{
-				//save the contents of editorArea to currentBatch, ifex
-				save(currentBatch, editorArea.getText());
-				unsavedChanges = false;
+				editors.get(0).save();
+				lblFilename.setText(editors.get(0).getFileName());
 			}
 		});
 		mnFile.add(mntmSaveBatch);
@@ -253,8 +189,8 @@ public class MainWindow
 			 */
 			public void actionPerformed(ActionEvent e)
 			{
-				//save the contents of the editorArea to a user-defined file
-				setCurrentBatch(saveAs(editorArea.getText()));
+				editors.get(0).saveAs();
+				lblFilename.setText(editors.get(0).getFileName());
 			}
 		});
 		mnFile.add(mntmSaveBatchAs);
@@ -270,7 +206,8 @@ public class MainWindow
 			 */
 			public void actionPerformed(ActionEvent e)
 			{
-				save(currentOutputDump, outputArea.getText());
+				//TODO saving results
+				//save(currentOutputDump, outputArea.getText());
 			}
 		});
 		mnFile.add(mntmSaveResults);
@@ -283,7 +220,8 @@ public class MainWindow
 			 */
 			public void actionPerformed(ActionEvent e)
 			{
-				currentOutputDump = saveAs(outputArea.getText());
+				//TODO saving results
+				//currentOutputDump = saveAs(outputArea.getText());
 			}
 		});
 		mnFile.add(mntmSaveResultsAs);
@@ -308,9 +246,66 @@ public class MainWindow
 		mnEdit.setMnemonic('e');
 		menuBar.add(mnEdit);
 		
+		JMenuItem mntmInsertFilePath = new JMenuItem("Insert File Path...");
+		mntmInsertFilePath.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_MASK));
+		mntmInsertFilePath.addActionListener(new ActionListener() {
+			/**
+			 * Browse for a file for which to add a path to in the input line
+			 */
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				JFileChooser chooser = new JFileChooser();
+				chooser.setDialogType(JFileChooser.OPEN_DIALOG);
+				int retVal = chooser.showOpenDialog(frmStringSequenceAnalyzer);
+				File f = null;
+				if(retVal == JFileChooser.APPROVE_OPTION)
+					f = chooser.getSelectedFile();
+				else
+					return;
+				
+				if(!inputLine.getText().endsWith(" "))
+					inputLine.setText(inputLine.getText() + " ");
+				
+				inputLine.setText(inputLine.getText() + f.getAbsolutePath());
+			}
+		});
+		mnEdit.add(mntmInsertFilePath);
+		
 		JMenu mnView = new JMenu("View");
 		mnView.setMnemonic('v');
 		menuBar.add(mnView);
+		
+		JMenu mnHelp = new JMenu("Help");
+		menuBar.add(mnHelp);
+		
+		JMenuItem mntmDocumentation = new JMenuItem("Documentation");
+		mntmDocumentation.addActionListener(new ActionListener() {
+			/**
+			 * Open Documentation
+			 */
+			public void actionPerformed(ActionEvent arg0)
+			{
+				try
+				{
+					URI doc = getClass().getResource("/res/doc.html").toURI();
+					
+					if(DEBUG)
+						System.out.println("Doc Resource is at " + doc.toString());
+					
+					if(Desktop.isDesktopSupported())
+					{
+						Desktop.getDesktop().browse(doc);
+					}
+				}
+				catch (IOException | URISyntaxException e)
+				{
+					System.err.println(e.getMessage());
+					e.printStackTrace();
+				}
+			}
+		});
+		mnHelp.add(mntmDocumentation);
 		frmStringSequenceAnalyzer.getContentPane().setLayout(new BoxLayout(frmStringSequenceAnalyzer.getContentPane(), BoxLayout.X_AXIS));
 		
 		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
@@ -353,13 +348,18 @@ public class MainWindow
 		JCheckBox chckbxCliwordwrap = new JCheckBox("Word Wrap");
 		cliToolBar.add(chckbxCliwordwrap);
 		
-		JScrollPane scrollPane = new JScrollPane();
+		scrollPane = new JScrollPane();
 		cli_view.add(scrollPane, "cell 0 1 3 2,grow");
 		
 		outputArea = new JTextPane();
+		outputArea.setForeground(Color.WHITE);
+		outputArea.setBackground(Color.BLACK);
 		outputArea.setFont(new Font("Courier New", Font.PLAIN, 13));
 		outputArea.setEditable(false);
 		scrollPane.setViewportView(outputArea);
+		
+		//auto-scroll
+		((DefaultCaret)outputArea.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		
 		inputLine = new JTextField();
 		inputLine.setFont(new Font("Courier New", Font.PLAIN, 13));
@@ -391,7 +391,7 @@ public class MainWindow
 			 */
 			@Override
 			public void mouseClicked(MouseEvent arg0) {
-				sendInToOut(); //TODO remove debug
+				sendInToOut();
 			}
 		});
 		cli_view.add(btnEnter, "cell 2 3");
@@ -430,7 +430,7 @@ public class MainWindow
 		editorWordWrap.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e)
 			{
-				
+				//TODO editor word wrap
 			}
 		});
 		editorToolBar.add(editorWordWrap);
@@ -438,13 +438,35 @@ public class MainWindow
 		JScrollPane scrollPane_1 = new JScrollPane();
 		editor_view.add(scrollPane_1, "cell 0 1,grow");
 		
-		lblFilename = new JLabel("example.txt");
+		lblFilename = new JLabel("???");
 		lblFilename.setFont(UIManager.getFont("InternalFrame.titleFont"));
 		scrollPane_1.setColumnHeaderView(lblFilename);
 		
 		editorArea = new JTextPane();
 		editorArea.setFont(new Font("Courier New", Font.PLAIN, 13));
-		editorArea.getDocument().addDocumentListener(changesListener);
+		changesIndicatorListener = new DocumentListener() {
+			@Override
+			public void removeUpdate(DocumentEvent e)
+			{
+				if(!lblFilename.getText().endsWith(UNSAVED_INDICATOR))
+					lblFilename.setText(lblFilename.getText() + UNSAVED_INDICATOR);
+			}
+			
+			@Override
+			public void insertUpdate(DocumentEvent e)
+			{
+				if(!lblFilename.getText().endsWith(UNSAVED_INDICATOR))
+					lblFilename.setText(lblFilename.getText() + UNSAVED_INDICATOR);
+			}
+			
+			@Override
+			public void changedUpdate(DocumentEvent e)
+			{
+				if(!lblFilename.getText().endsWith(UNSAVED_INDICATOR))
+					lblFilename.setText(lblFilename.getText() + UNSAVED_INDICATOR);
+			}
+		};
+		editorArea.getDocument().addDocumentListener(changesIndicatorListener);
 		editorArea.addCaretListener(new CaretListener() {
 			/**
 			 * Update caret status bar in the editor tab
@@ -493,123 +515,31 @@ public class MainWindow
 		area.setFont(area.getFont().deriveFont((float)size));
 	}
 	
-	/**
-	 * Save the currentBatch. If there is no currentBatch, run saveAs()
-	 */
-	private void save(File defaultFile, String source)
-	{
-		if(defaultFile == null)
-		{
-			defaultFile = saveAs(source);
-			return;
-		}
-		
-		//editorArea contents into file
-		try
-		{
-			BufferedWriter writer = new BufferedWriter(new FileWriter(defaultFile));
-			writer.write(source);
-			writer.close();
-		}
-		catch (IOException ioe){ ioe.printStackTrace(); }
-	}
-	
-	/**
-	 * Save the contents of editorArea to a file in the file system
-	 */
-	private File saveAs(String source)
-	{
-		//user defines save file name and directory
-		JFileChooser chooser = new JFileChooser();
-		chooser.setDialogType(JFileChooser.SAVE_DIALOG);
-		int retVal = chooser.showSaveDialog(frmStringSequenceAnalyzer);
-		File f = null;
-		if(retVal == JFileChooser.APPROVE_OPTION)
-			f = chooser.getSelectedFile();
-		else
-			return null;
-		
-		//editorArea contents into file
-		try
-		{
-			BufferedWriter writer = new BufferedWriter(new FileWriter(f));
-			writer.write(source);
-			writer.close();
-		}
-		catch (IOException ioe){ ioe.printStackTrace(); }
-		
-		return f;
-	}
-	
-	/**
-	 * Set the file currently being edited in the editor
-	 */
-	private void setCurrentBatch(File f)
-	{
-		currentBatch = f;
-		if(f != null)
-			lblFilename.setText(currentBatch.getName());
-		else
-			lblFilename.setText("???");
-	}
-	
-	/**
-	 * Check for unsaved changes in the Editor
-	 * 
-	 * @return whether the situation was resolved
-	 */
-	private boolean resolveUnsavedChanges()
-	{
-		//check if any changes have not been saved
-		if(unsavedChanges)
-		{
-			int option = JOptionPane.showConfirmDialog(frmStringSequenceAnalyzer, "There are unsaved changes. Would you like to save?", "Save?", JOptionPane.YES_NO_CANCEL_OPTION);
-			switch(option)
-			{
-			case JOptionPane.YES_OPTION:
-				//save the contents of editorArea
-				save(currentBatch, editorArea.getText());
-				unsavedChanges = false;
-				break;
-				
-			case JOptionPane.NO_OPTION:
-				//just continue with the opening procedure
-				
-				break;
-				
-			case JOptionPane.CANCEL_OPTION:
-				//back out of opening a file
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	//TODO remove debug
 	private void sendInToOut()
 	{
 		if(Console.instance().processInput(inputLine.getText()) == -1)
 		{
-			outputArea.setText(outputArea.getText() + "~ " + inputLine.getText() + "\n");
+			Console.println("~ " + inputLine.getText());
 			
-			AntlrBridge a = new AntlrBridge(inputLine.getText() + "\n");
+			try
+			{
+				AntlrBridge a = new AntlrBridge(inputLine.getText() + "\n");
+			}
+			catch(Exception e)
+			{
+				Console.println("ANTLR interpretation engine encountered an error.", Console.getErr());
+				Console.println(e.getMessage(), Console.getErr());
+				e.printStackTrace();
+			}
 		}
 		
 		Console.instance().addToHistory(inputLine.getText());
 		inputLine.setText("");
 	}
 	
-	/**
-	 * Print some text to the output pane, appending to the existing content
-	 * @param output - The text to append to the output pane
-	 */
-	public void printToOut(String output)
+	public JTextPane getOutput()
 	{
-		outputArea.setText(outputArea.getText() + output);
-	}
-	public void printlnToOut(String output)
-	{
-		printToOut(output + "\n");
+		return outputArea;
 	}
 	
 	/**

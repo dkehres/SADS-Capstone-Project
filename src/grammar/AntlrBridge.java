@@ -4,6 +4,7 @@ import java.util.*;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 import engine.command.*;
+import gui.Console;
 
 public class AntlrBridge {
 
@@ -16,15 +17,25 @@ public class AntlrBridge {
 		SequenceAnalyzerLexer lexer = new SequenceAnalyzerLexer(antlrInput);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SequenceAnalyzerParser parser = new SequenceAnalyzerParser(tokens);
-		ParseTree tree = parser.prog(); // parse
 
-		CommandObjectVisitor coVisitor = new CommandObjectVisitor();
-		coVisitor.visit(tree);
+		ParseTree cst = parser.init(); // parse
 		
-		Stack<CommandObject> commandObjectStack = coVisitor.commandObjectStack;
-		
-		commandExecutor.executeStack(commandObjectStack);
+		Object result;
+		try
+		{
+			CommandObjectVisitor ast = new CommandObjectVisitor();
+			result = ast.visit(cst);
+			//Console.println(result.toString());
+		}
+		catch(ClassCastException cce)
+		{
+			Console.println(cce.getMessage(), Console.getErr());
+			cce.printStackTrace();
+		}
 	}
-	
-	
+
+	private void visit(ParseTree cst) {
+		// TODO Auto-generated method stub
+		
+	}
 }
