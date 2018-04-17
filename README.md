@@ -1,15 +1,24 @@
 Basic functionality
+
 The current version of the SADS tool includes nine different functions that can be called from the CLI. The first four of these functions are specific to Dynamical Systems, whereas the last five commands are more generic string manipulation commands.  These functions include: 
 
 
 Shift Maximality
+
 Cutting Times
+
 Word Count
+
 Star Product
+
 Concatenation
+
 Insertion
+
 Substitution
+
 Compare
+
 Alphabet Definition and Derivation
 
 
@@ -19,14 +28,11 @@ Shift Maximality
 results will be either 1 (is shift maximal) or -1 (is not shift maximal)
 
 
-Syntax:
-sm(expression)
-sm expression
+Syntax: sm(expression)\nsm expression
+
 Where “expression” is a sequence of alphanumeric characters or another command. 
 
-Example:
-Intput: sm(“101011”)
-Output: -1
+Example: Intput: sm(“101011”) \n Output: -1
 
 
 Cutting Times
