@@ -2,16 +2,25 @@ Basic functionality
 
 The current version of the SADS tool includes nine different functions that can be called from the CLI. The first four of these functions are specific to Dynamical Systems, whereas the last five commands are more generic string manipulation commands.  These functions include: 
 
-
 -Shift Maximality
+
 -Cutting Times
+
 -Word Count
+
 -Star Product
+
 -Concatenation
+
 -Insertion
+
 -Substitution
+
 -Compare
+
 -Alphabet Definition and Derivation
+
+
 
 The syntax, as well as example input/output for these functions are detailed below.
 
@@ -84,7 +93,7 @@ sub(expression, “string”->”string”,“string”->”string”, integer)
 Where “expression” is a sequence of 1’s and 0’s contained within double quotes and “string” is a sequence of alphanumeric characters. Integer defines the number of times to perform the substitution if less than or equal to 100. If it is greater, it defines the number of characters to generate.
 
 	Example: Input: sub(“101”, “1”->”0”,”0”->”1”)		Output: 010
-		 Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)		Output: 1abb0
+		 Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)	Output: 1abb0
 
 Compare 
 compare two strings and gives the position in which they differ
@@ -162,20 +171,25 @@ wc(sp(“101011”, “101”), 3)
 Console Commands
 
 /help
+
 Prints out a list of all console commands and a short help string for each
 
 /exit
+
 Quits the application.
 
 /clear
+
 Clears all text in the output window.
 
 /exec <file path>
+
 Executes a batch of several sequential commands.  To automatically insert a file path into the command line, use Ctrl + I, or Edit > Insert File Path... from the menu bar.
 
 Batch files should be written in text format (.txt).  Below is an example.
 
 /debug
+
 Toggles developer debug mode on and off.  Not recommended for normal use.
 
 Executable version with documentation coming soon...
