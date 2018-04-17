@@ -4,23 +4,14 @@ The current version of the SADS tool includes nine different functions that can 
 
 
 -Shift Maximality
-
 -Cutting Times
-
 -Word Count
-
 -Star Product
-
 -Concatenation
-
 -Insertion
-
 -Substitution
-
 -Compare
-
 -Alphabet Definition and Derivation
-
 
 The syntax, as well as example input/output for these functions are detailed below.
 
@@ -93,7 +84,7 @@ sub(expression, “string”->”string”,“string”->”string”, integer)
 Where “expression” is a sequence of 1’s and 0’s contained within double quotes and “string” is a sequence of alphanumeric characters. Integer defines the number of times to perform the substitution if less than or equal to 100. If it is greater, it defines the number of characters to generate.
 
 	Example: Input: sub(“101”, “1”->”0”,”0”->”1”)		Output: 010
-		Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)	Output: 1abb0
+		 Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)		Output: 1abb0
 
 Compare 
 compare two strings and gives the position in which they differ
