@@ -28,19 +28,24 @@ Shift Maximality
 results will be either 1 (is shift maximal) or -1 (is not shift maximal)
 
 
-Syntax: sm(expression)		or		sm expression
+Syntax: 
+sm(expression) 
+sm expression
 
 Where “expression” is a sequence of alphanumeric characters or another command. 
 
-Example: Input: sm(“101011”)	 Output: -1
+	Example: Input: sm(“101011”)	 Output: -1
 
 
 Cutting Times
 
-Syntax: ct(expression)	or	ct expression
+Syntax: 
+ct(expression)
+ct expression
+
 Where “expression is a sequence of alphanumeric characters or another command
 
-Example: Input: ct(“101011”)	Output: 1,2,6
+	Example: Input: ct(“101011”)	Output: 1,2,6
 
 Word Count 
 returns how many subwords of a certain length are in the main string
@@ -48,7 +53,7 @@ returns how many subwords of a certain length are in the main string
 Syntax: wc(expression, integer)
 Where “expression” is a sequence of alphanumeric characters or another command and “integer” is a whole number that is less than or equal to the length in digits of “expression”
 
-Example: Input: wc(“101011”, 2)		Output: {01=2, 10=2, 11=1}
+	Example: Input: wc(“101011”, 2)		Output: {01=2, 10=2, 11=1}
 
 Star Product 
 creates a new string based on predefined rules
@@ -65,20 +70,17 @@ Syntax:
 concat(expression, expression)
 Where “expression” is a sequence of alphanumeric characters or another command
 
-Example: 
-Input: concat(“101011”, “101”)
-Output: 101011101
+	Example: Input: concat(“101011”, “101”)		Output: 101011101
 
 Insertion
 insert after an index
 
 Syntax:
 insert(expression, expression, index)
+
 Where “expression” is a sequence of alphanumeric characters or another command and “index” is 
 
-Example
-insert(“101011”, “111”, 2)
-101111011
+	Example: Input: insert(“101011”, “111”, 2)		Output: 101111011
 
 Substitution 
 substitute characters of a string with different characters
@@ -87,14 +89,11 @@ Syntax:
 sub(expression, “string”->”string”)
 sub(expression, “string”->”string”,“string”->”string”)
 sub(expression, “string”->”string”,“string”->”string”, integer)
+
 Where “expression” is a sequence of 1’s and 0’s contained within double quotes and “string” is a sequence of alphanumeric characters. Integer defines the number of times to perform the substitution if less than or equal to 100. If it is greater, it defines the number of characters to generate.
 
-Example: 
-Input: sub(“101”, “1”->”0”,”0”->”1”)
-Output: 010
-
-Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)
-Output: 1abb0
+	Example: Input: sub(“101”, “1”->”0”,”0”->”1”)		Output: 010
+			 Input: sub(“10”, “1”->”1a”,”a”->”b”, 3)	Output: 1abb0
 
 Compare 
 compare two strings and gives the position in which they differ
@@ -103,9 +102,7 @@ Syntax:
 cmp(string, string)
 Where “string” is a sequence of alphanumeric characters.
 
-Example: 
-Input: cmp(“101011”, “010”)
-Output: 1 2 3 4 5 6
+	Example: Input: cmp(“101011”, “010”)		Output: 1 2 3 4 5 6
 
 Alphabet Definition
 define an alphabet to be used for derivation
@@ -113,13 +110,12 @@ define an alphabet to be used for derivation
 Syntax:
 def({string, string, ...})
 def({string, string, ...}, r(int, int, ...), r(int, int, ...), ...)
+
 Where “string” is a sequence of alphanumeric characters.
 
 First is the set of characters contained in the alphabet, after that are the optional rules for deriving higher levels of the alphabet using der().  The number of rules must match the number of characters.
 
-Example: 
-Input: def({“0”, “1”}, r(0, 1), r(1, 0))
-Output: {“0”, “1”}
+	Example: Input: def({“0”, “1”}, r(0, 1), r(1, 0))		Output: {“0”, “1”}
 
 
 Alphabet Derivation
@@ -134,9 +130,7 @@ And “variable” is a stored alphabet.
 
 If a stored alphabet is used, then it will always take the value of the highest-level alphabet after generation (e.g. if a level 1 alphabet is used to generate a level 10 one, the level 10 will be stored in the variable; but if that level 10 alphabet is used to generate a level 2, then the variable will retain the level 10 alphabet, even if the der() returns the level 2 version).
 
-Example: 
-Input: der(def({“0”, “1”}, r(0, 1), r(1, 0)), 2)
-Output: {“01”, “10”}
+	Example: Input: der(def({“0”, “1”}, r(0, 1), r(1, 0)), 2)		Output: {“01”, “10”}
 
 
 
@@ -153,8 +147,7 @@ Allows for the local storage of a string that is accessible later in the executi
 variable_name := “string”
 Where “string” is a sequence of alphanumeric characters.
 
-Example
-x := “101011”
+	Example: x := “101011”
 
 
 
@@ -165,9 +158,7 @@ Syntax:
 print variable_name 
 Where “variable_name” is the string used during variable assignment (see above)
 
-Example: 
-Input: print x 
-Output: 101011  
+	Example: Input: print x 	Output: 101011  
 
 Nested Commands
 
