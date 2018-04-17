@@ -28,45 +28,35 @@ Shift Maximality
 results will be either 1 (is shift maximal) or -1 (is not shift maximal)
 
 
-Syntax: sm(expression)\nsm expression
+Syntax: sm(expression)		or		sm expression
 
 Where “expression” is a sequence of alphanumeric characters or another command. 
 
-Example: Intput: sm(“101011”) \n Output: -1
+Example: Input: sm(“101011”)	 Output: -1
 
 
 Cutting Times
 
-	Syntax:
-ct(expression)
-ct expression
+Syntax: ct(expression)	or	ct expression
 Where “expression is a sequence of alphanumeric characters or another command
 
-Example: 
-Input: ct(“101011”)
-Output: 1,2,6
+Example: Input: ct(“101011”)	Output: 1,2,6
 
 Word Count 
 returns how many subwords of a certain length are in the main string
 
-	Syntax:
-wc(expression, integer)
+Syntax: wc(expression, integer)
 Where “expression” is a sequence of alphanumeric characters or another command and “integer” is a whole number that is less than or equal to the length in digits of “expression”
 
-Example: 
-Input: wc(“101011”, 2)
-Output: {01=2, 10=2, 11=1}
+Example: Input: wc(“101011”, 2)		Output: {01=2, 10=2, 11=1}
 
 Star Product 
 creates a new string based on predefined rules
 
-	Syntax:
-sp(expression, expression)
+Syntax: sp(expression, expression)
 Where “expression” is a sequence of alphanumeric characters or another command
 	
-	Example: 
-Input: sp(“101011”, “101011”)
-Output: 101011110101101010111101011010101111010111101011
+	Example: Input: sp(“101011”, “101011”)		Output: 101011110101101010111101011010101111010111101011
 
 Concatenation 
 adds the second string on to the the end of the first string
